@@ -1,0 +1,10 @@
+{
+  "name": "Fleet Tracker Codespace",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:0-20",
+  "forwardPorts": [3001, 5173],
+  "extensions": [
+    "GitHub.copilot",
+    "dbaeumer.vscode-eslint"
+  ],
+  "postCreateCommand": "cd backend && npm install && cd ../frontend && npm install"
+}
