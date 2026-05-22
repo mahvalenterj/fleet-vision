@@ -11,7 +11,9 @@ async function autenticar() {
       path: `/v2.1/Login/Autenticar?token=${TOKEN}`,
       method: 'POST',
       headers: {
-        'Content-Length': 0
+        'Content-Length': '0',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
       }
     }, (res) => {
       cookie = res.headers['set-cookie']?.[0];
@@ -34,7 +36,10 @@ async function getPosicoes() {
       hostname: BASE_URL,
       path: '/v2.1/Posicao',
       method: 'GET',
-      headers: { Cookie: cookie }
+      headers: {
+        'Cookie': cookie,
+        'User-Agent': 'Mozilla/5.0'
+      }
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
