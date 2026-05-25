@@ -1,10 +1,11 @@
 const express = require('express');
-const { getVehicles } = require('../simulator');
+const { getAllVehicles } = require('../services/olhoVivoService');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  res.json(getVehicles());
+router.get('/', async (req, res) => {
+  const vehicles = await getAllVehicles();
+  res.json(vehicles);
 });
 
 module.exports = router;
