@@ -62,7 +62,7 @@ authenticate().then((isAuth) => {
       }).catch(err => {
         console.error('Erro ao atualizar veículos:', err);
       });
-    }, 10000);
+    }, 30000);
 
     console.log('✅ Sistema de atualização de veículos iniciado');
   } else {
