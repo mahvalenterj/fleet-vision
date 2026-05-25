@@ -1,17 +1,34 @@
 import React from 'react';
 
-export function VehiclePanel({ vehicles }) {
+export function VehiclePanel({ vehicles, isConnected }) {
   const sortedVehicles = [...vehicles].sort((a, b) => a.code.localeCompare(b.code));
 
   return (
     <aside style={panelStyles.container}>
       <div style={panelStyles.header}>
-        <h2 style={panelStyles.title}>Veículos em rota</h2>
-        <p style={panelStyles.subtitle}>Atualizado a cada 2 segundos</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <h2 style={panelStyles.title}>Veículos em rota</h2>
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: isConnected ? '#10b981' : '#ef4444',
+              animation: isConnected ? 'pulse 2s infinite' : 'none'
+            }}
+          />
+        </div>
+        <p style={panelStyles.subtitle}>
+          {isConnected ? 'Conectado · Atualizado a cada 2s' : 'Desconectado - tentando reconectar...'}
+        </p>
       </div>
 
       {sortedVehicles.length === 0 ? (
-        <div style={panelStyles.empty}>Aguardando conexão com o backend...</div>
+        <div style={panelStyles.empty}>
+          {isConnected
+            ? 'Carregando veículos...'
+            : 'Aguardando conexão com o backend...'}
+        </div>
       ) : (
         <ul style={panelStyles.list}>
           {sortedVehicles.map((vehicle) => (
@@ -28,6 +45,13 @@ export function VehiclePanel({ vehicles }) {
           ))}
         </ul>
       )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </aside>
   );
 }

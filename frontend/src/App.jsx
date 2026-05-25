@@ -4,12 +4,11 @@ import { VehiclePanel } from './components/VehiclePanel';
 import { useSocket } from './hooks/useSocket';
 
 export default function App() {
-  const { vehicles } = useSocket();
-    window.__vehicles = vehicles;
-    console.log('vehicles state:', vehicles);
+  const { vehicles, isConnected } = useSocket();
+
   return (
     <div style={layoutStyles.wrapper}>
-      <VehiclePanel vehicles={vehicles} />
+      <VehiclePanel vehicles={vehicles} isConnected={isConnected} />
       <main style={layoutStyles.mapArea}>
         <MapView vehicles={vehicles} />
       </main>
