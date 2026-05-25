@@ -7,24 +7,11 @@ export default function App() {
   const { vehicles, isConnected } = useSocket();
 
   return (
-    <div style={layoutStyles.wrapper}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0a0c0f' }}>
       <VehiclePanel vehicles={vehicles} isConnected={isConnected} />
-      <main style={layoutStyles.mapArea}>
+      <main style={{ flex: 1, position: 'relative' }}>
         <MapView vehicles={vehicles} />
       </main>
     </div>
   );
 }
-
-const layoutStyles = {
-  wrapper: {
-    display: 'flex',
-    minHeight: '100vh',
-    background: '#f8fafc',
-    color: '#111827'
-  },
-  mapArea: {
-    flex: 1,
-    minHeight: '100vh'
-  }
-};
