@@ -3,8 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { startSimulator, getVehicles } = require('./simulator');
+const { authenticate, getAllVehicles } = require('./services/olhoVivoService');
 const vehiclesRouter = require('./routes/vehicles');
+const stopsRouter = require('./routes/stops');
 
 dotenv.config();
 
@@ -21,25 +22,49 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 app.use('/api/vehicles', vehiclesRouter);
+app.use('/api/stops', stopsRouter);
 
 app.get('/', (req, res) => {
   res.json({ status: 'Fleet Tracker backend is running' });
 });
 
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-  socket.emit('vehicle:init', getVehicles());
-
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected:', socket.id);
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    backend: 'SP Trans Olho Vivo API'
   });
 });
 
-startSimulator();
-setInterval(() => {
-  io.emit('vehicle:update', getVehicles());
-}, 2000);
+io.on('connection', (socket) => {
+  console.log('🔌 Socket conectado:', socket.id);
+  
+  // Envia veículos ao conectar
+  getAllVehicles().then(vehicles => {
+    socket.emit('vehicle:init', vehicles);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ Socket desconectado:', socket.id);
+  });
+});
+
+// Inicializa autenticação
+authenticate().then((isAuth) => {
+  if (isAuth) {
+    // Atualiza posição dos veículos a cada 10 segundos
+    setInterval(() => {
+      getAllVehicles().then(vehicles => {
+        io.emit('vehicle:update', vehicles);
+      });
+    }, 10000);
+
+    console.log('✅ Sistema de atualização de veículos iniciado');
+  } else {
+    console.warn('⚠️  Executando em modo simulado (sem dados reais)');
+  }
+});
 
 server.listen(PORT, () => {
-  console.log(`Backend listening on http://localhost:${PORT}`);
+  console.log(`🚀 Backend listening on http://localhost:${PORT}`);
 });
