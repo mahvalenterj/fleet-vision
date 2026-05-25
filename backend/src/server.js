@@ -42,6 +42,9 @@ io.on('connection', (socket) => {
   // Envia veículos ao conectar
   getAllVehicles().then(vehicles => {
     socket.emit('vehicle:init', vehicles);
+  }).catch(err => {
+    console.error('Erro ao buscar veículos iniciais:', err);
+    socket.emit('vehicle:init', []);
   });
 
   socket.on('disconnect', () => {
@@ -56,13 +59,27 @@ authenticate().then((isAuth) => {
     setInterval(() => {
       getAllVehicles().then(vehicles => {
         io.emit('vehicle:update', vehicles);
+      }).catch(err => {
+        console.error('Erro ao atualizar veículos:', err);
       });
     }, 10000);
 
     console.log('✅ Sistema de atualização de veículos iniciado');
   } else {
     console.warn('⚠️  Executando em modo simulado (sem dados reais)');
+    
+    // Mesmo em modo simulado, atualiza os dados
+    setInterval(() => {
+      getAllVehicles().then(vehicles => {
+        io.emit('vehicle:update', vehicles);
+      }).catch(err => {
+        console.error('Erro ao atualizar veículos simulados:', err);
+      });
+    }, 5000);
   }
+}).catch(err => {
+  console.error('Erro durante autenticação:', err);
+  console.warn('⚠️  Iniciando em modo de fallback');
 });
 
 server.listen(PORT, () => {
