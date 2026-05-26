@@ -5,6 +5,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 const INITIAL_CENTER = [-46.633308, -23.55052];
 const INITIAL_ZOOM = 11;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 const btnBase = {
   fontFamily: "'Nunito Sans', sans-serif",
@@ -55,6 +56,113 @@ export function MapView({ vehicles, selectedVehicle, onSelectVehicle }) {
     });
   }, [selectedVehicle]);
 
+  // Desenha trajeto quando filtrado por uma linha
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    const clearRoute = () => {
+      if (map.getLayer('route-line')) map.removeLayer('route-line');
+      if (map.getLayer('route-stops')) map.removeLayer('route-stops');
+      if (map.getSource('route')) map.removeSource('route');
+      if (map.getSource('route-stops')) map.removeSource('route-stops');
+    };
+
+    clearRoute();
+
+    const lineCodes = [...new Set(vehicles.map(v => v.lineCode).filter(Boolean))];
+
+    if (lineCodes.length !== 1) return;
+
+    const lineCode = lineCodes[0];
+
+    fetch(`${BACKEND_URL}/api/stops/line/${lineCode}`)
+      .then(r => r.json())
+      .then(stops => {
+        if (!stops || stops.length < 2) return;
+
+        const coords = stops.map(s => [s.position.lng, s.position.lat]);
+
+        // Linha do trajeto
+        map.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: coords }
+          }
+        });
+
+        map.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#00BCD4',
+            'line-width': 3,
+            'line-opacity': 0.8,
+            'line-dasharray': [2, 1]
+          }
+        });
+
+        // Paradas da linha
+        map.addSource('route-stops', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: stops.map(s => ({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [s.position.lng, s.position.lat] },
+              properties: { name: s.name, address: s.address }
+            }))
+          }
+        });
+
+        map.addLayer({
+          id: 'route-stops',
+          type: 'circle',
+          source: 'route-stops',
+          paint: {
+            'circle-radius': 5,
+            'circle-color': '#fff',
+            'circle-stroke-color': '#00BCD4',
+            'circle-stroke-width': 2
+          }
+        });
+
+        // Popup nas paradas
+        map.on('click', 'route-stops', (e) => {
+          const { name, address } = e.features[0].properties;
+          new mapboxgl.Popup({ closeButton: false, offset: 10 })
+            .setLngLat(e.features[0].geometry.coordinates)
+            .setHTML(`
+              <div style="font-family:'Nunito Sans',sans-serif;padding:4px 2px">
+                <div style="font-size:13px;font-weight:700;color:#1a1f2e;margin-bottom:2px">🚌 ${name}</div>
+                <div style="font-size:11px;color:#757575">${address || ''}</div>
+              </div>
+            `)
+            .addTo(map);
+        });
+
+        map.on('mouseenter', 'route-stops', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'route-stops', () => {
+          map.getCanvas().style.cursor = '';
+        });
+
+        // Ajusta zoom para a linha
+        const bounds = coords.reduce(
+          (b, c) => b.extend(c),
+          new mapboxgl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: 60, maxZoom: 14 });
+      })
+      .catch(e => console.error('Erro ao buscar trajeto:', e));
+
+  }, [vehicles, mapLoaded]);
+
+  // Atualiza marcadores de veículos
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
@@ -70,9 +178,6 @@ export function MapView({ vehicles, selectedVehicle, onSelectVehicle }) {
       if (existing) {
         existing.setLngLat(coord);
         existing.getElement().style.background = isSelected ? '#FF5722' : '#00BCD4';
-        existing.getElement().style.boxShadow = isSelected
-          ? '0 0 0 4px rgba(255,87,34,0.3), 0 2px 8px rgba(0,0,0,0.2)'
-          : '0 0 0 3px rgba(0,188,212,0.25), 0 2px 6px rgba(0,0,0,0.15)';
         existing.getElement().style.width = isSelected ? '16px' : '12px';
         existing.getElement().style.height = isSelected ? '16px' : '12px';
         return;
@@ -123,15 +228,14 @@ export function MapView({ vehicles, selectedVehicle, onSelectVehicle }) {
       return;
     }
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-      const res = await fetch(`${backendUrl}/api/stops/search?q=Terminal`);
+      const res = await fetch(`${BACKEND_URL}/api/stops/search?q=Terminal`);
       const stops = await res.json();
       stops.forEach(stop => {
         const el = document.createElement('div');
         el.style.cssText = `
           width:10px; height:10px; border-radius:3px;
           background:#FF9800;
-          box-shadow: 0 0 0 3px rgba(255,152,0,0.2), 0 2px 4px rgba(0,0,0,0.15);
+          box-shadow: 0 0 0 3px rgba(255,152,0,0.2);
           cursor:pointer; border: 2px solid #fff;
         `;
         new mapboxgl.Marker({ element: el })
